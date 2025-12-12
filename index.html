@@ -2201,322 +2201,432 @@
 // ============================
 // LENZPOWER - حماية حقيقية للموقع
 // ============================
-
 (function() {
     'use strict';
     
-    // رسائل التحذير بالفرنسية
-    const messages = {
-        rightClick: "Désolé ! Le clic droit est désactivé sur ce site.",
-        devTools: "Accès non autorisé aux outils de développement !",
-        copyContent: "La copie de contenu est protégée sur LENZPOWER.",
-        selectContent: "La sélection de texte est limitée pour protéger notre contenu."
+    // تحقق إذا كان السكريبت مثبتاً مسبقاً
+    if (window.lenzpowerProtected) return;
+    window.lenzpowerProtected = true;
+    
+    // ==================== CONFIGURATION ====================
+    const config = {
+        messages: {
+            rightClick: "Désolé ! Le clic droit est désactivé sur ce site.",
+            devTools: "Accès non autorisé aux outils de développement !",
+            copyContent: "La copie de contenu est protégée sur LENZPOWER.",
+            selectContent: "La sélection de texte est limitée pour protéger notre contenu."
+        },
+        colors: {
+            error: '#D32F2F',
+            warning: '#FF9800',
+            info: '#2196F3',
+            success: '#4CAF50'
+        },
+        debugMode: false // ضع true للاختبار
     };
     
-    // ========== 1. منع النقر الأيمن ==========
-    document.addEventListener('contextmenu', function(e) {
-        e.preventDefault();
-        showAlert(messages.rightClick, 'warning');
-        logEvent('Tentative de clic droit');
-        return false;
-    });
-    
-    // ========== 2. منع النسخ ==========
-    document.addEventListener('copy', function(e) {
-        e.preventDefault();
-        showAlert(messages.copyContent, 'info');
-        logEvent('Tentative de copie');
-        return false;
-    });
-    
-    // ========== 3. منع التحديد ==========
-    document.addEventListener('selectstart', function(e) {
-        e.preventDefault();
-        showAlert(messages.selectContent, 'info');
-        logEvent('Tentative de sélection');
-        return false;
-    });
-    
-    // ========== 4. منع فتح أدوات المطور ==========
-    
-    // أ) منع اختصارات لوحة المفاتيح
-    document.addEventListener('keydown', function(e) {
-        // F12
-        if (e.key === 'F12' || e.keyCode === 123) {
-            e.preventDefault();
-            showAlert(messages.devTools, 'error');
-            logEvent('F12 pressé');
-            return false;
-        }
-        
-        // Ctrl+Shift+I
-        if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.keyCode === 73)) {
-            e.preventDefault();
-            showAlert(messages.devTools, 'error');
-            logEvent('Ctrl+Shift+I pressé');
-            return false;
-        }
-        
-        // Ctrl+Shift+J
-        if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.keyCode === 74)) {
-            e.preventDefault();
-            showAlert(messages.devTools, 'error');
-            logEvent('Ctrl+Shift+J pressé');
-            return false;
-        }
-        
-        // Ctrl+Shift+C
-        if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.keyCode === 67)) {
-            e.preventDefault();
-            showAlert(messages.devTools, 'error');
-            logEvent('Ctrl+Shift+C pressé');
-            return false;
-        }
-        
-        // Ctrl+U (عرض المصدر)
-        if (e.ctrlKey && (e.key === 'u' || e.keyCode === 85)) {
-            e.preventDefault();
-            showAlert(messages.devTools, 'error');
-            logEvent('Ctrl+U pressé');
-            return false;
-        }
-    });
-    
-    // ب) كشف فتح أدوات المطور عن طريق تغيير الحجم
-    let devToolsOpen = false;
-    let lastWidth = window.innerWidth;
-    let lastHeight = window.innerHeight;
-    
-    setInterval(function() {
-        const widthDiff = Math.abs(window.outerWidth - window.innerWidth);
-        const heightDiff = Math.abs(window.outerHeight - window.innerHeight);
-        
-        // إذا كان الفرق كبيراً (أدوات المطور مفتوحة)
-        if ((widthDiff > 100 || heightDiff > 100) && !devToolsOpen) {
-            devToolsOpen = true;
-            showAlert(messages.devTools, 'error');
-            logEvent('DevTools détectés par changement de taille');
+    // ==================== LOGGING SYSTEM ====================
+    const logger = {
+        log: function(event) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[LENZPOWER Security] ${timestamp} - ${event}`;
             
-            // محاولة إغلاق أدوات المطور
-            closeDevTools();
+            if (config.debugMode) {
+                console.log(logMessage);
+            }
+            
+            // يمكنك إضافة إرسال إلى سيرفر هنا
+            // this.sendToServer(event);
+        },
+        
+        sendToServer: function(event) {
+            // مثال لإرسال بيانات إلى سيرفر
+            // fetch('/api/log-security-event', {
+            //     method: 'POST',
+            //     body: JSON.stringify({ event, timestamp: new Date() })
+            // });
         }
+    };
+    
+    // ==================== ALERT SYSTEM ====================
+    const alertSystem = {
+        createAlert: function(message, type = 'info') {
+            // إزالة أي إنذار سابق
+            this.removeAlert();
+            
+            const alertDiv = document.createElement('div');
+            alertDiv.id = 'lenzpower-security-alert';
+            alertDiv.className = 'lenzpower-alert';
+            
+            const color = config.colors[type] || config.colors.info;
+            
+            alertDiv.innerHTML = `
+                <div class="alert-content" style="background: ${color};">
+                    <span>${message}</span>
+                    <button class="alert-close">&times;</button>
+                </div>
+            `;
+            
+            document.body.appendChild(alertDiv);
+            
+            // إضافة الـ CSS إذا لم يكن موجوداً
+            this.addAlertStyles();
+            
+            // إضافة حدث إغلاق
+            alertDiv.querySelector('.alert-close').onclick = () => this.removeAlert();
+            
+            // إزالة تلقائية بعد 3 ثواني
+            setTimeout(() => this.removeAlert(), 3000);
+        },
         
-        lastWidth = window.innerWidth;
-        lastHeight = window.innerHeight;
-    }, 500);
-    
-    // ج) طريقة متقدمة لكشف أدوات المطور
-    const element = new Image();
-    Object.defineProperty(element, 'id', {
-        get: function() {
-            showAlert(messages.devTools, 'error');
-            logEvent('DevTools détectés par vérification avancée');
-            closeDevTools();
-        }
-    });
-    
-    console.log('%c ' + element, 'font-size: 1px;');
-    
-    // ========== 5. منع سحب الصور ==========
-    document.addEventListener('dragstart', function(e) {
-        if (e.target.tagName === 'IMG') {
-            e.preventDefault();
-            logEvent('Tentative de glisser-déposer d\'image');
-            return false;
-        }
-    });
-    
-    // ========== 6. حماية إضافية للمحتوى ==========
-    
-    // أ) إضافة نص خفي يحمي النسخ
-    document.addEventListener('DOMContentLoaded', function() {
-        const protectionSpan = document.createElement('span');
-        protectionSpan.style.cssText = `
-            position: absolute;
-            left: -9999px;
-            top: -9999px;
-            opacity: 0;
-            pointer-events: none;
-            user-select: none;
-        `;
-        protectionSpan.textContent = 'LENZPOWER © 2025 - Site protégé';
-        document.body.appendChild(protectionSpan);
-    });
-    
-    // ب) منع فحص العناصر
-    Object.defineProperty(document, '__defineGetter__', {
-        value: function() {
-            return function() {
-                showAlert(messages.devTools, 'error');
-                return null;
-            };
-        }
-    });
-    
-    // ========== 7. وظيفة إغلاق أدوات المطور ==========
-    function closeDevTools() {
-        // محاولة إغلاق أدوات المطور بإعادة تحميل الصفحة
-        setTimeout(function() {
-            window.location.reload();
-        }, 2000);
+        removeAlert: function() {
+            const existing = document.getElementById('lenzpower-security-alert');
+            if (existing) existing.remove();
+        },
         
-        // تشويش شاشة المستخدم
-        const overlay = document.createElement('div');
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #D32F2F, #212121);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 999999;
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
-        `;
-        
-        overlay.innerHTML = `
-            <h1 style="font-size: 2rem; margin-bottom: 20px;">
-                <i class="fas fa-shield-alt"></i> LENZPOWER - Sécurité
-            </h1>
-            <p style="font-size: 1.2rem; max-width: 600px; margin-bottom: 20px;">
-                Les outils de développement sont interdits sur ce site.
-            </p>
-            <p style="font-size: 1rem; opacity: 0.8;">
-                La page sera rechargée automatiquement.
-            </p>
-        `;
-        
-        document.body.appendChild(overlay);
-    }
-    
-    // ========== 8. عرض التنبيهات ==========
-    function showAlert(message, type) {
-        // إزالة أي تنبيه سابق
-        const oldAlert = document.getElementById('lenzpower-alert');
-        if (oldAlert) oldAlert.remove();
-        
-        // تحديد الألوان
-        let bgColor, icon;
-        switch(type) {
-            case 'error': bgColor = '#D32F2F'; icon = 'fa-exclamation-triangle'; break;
-            case 'warning': bgColor = '#FF9800'; icon = 'fa-exclamation-circle'; break;
-            case 'info': bgColor = '#2196F3'; icon = 'fa-info-circle'; break;
-            default: bgColor = '#212121'; icon = 'fa-shield-alt';
-        }
-        
-        // إنشاء التنبيه
-        const alertDiv = document.createElement('div');
-        alertDiv.id = 'lenzpower-alert';
-        alertDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${bgColor};
-            color: white;
-            padding: 15px 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 999998;
-            display: flex;
-            align-items: center;
-            max-width: 400px;
-            animation: lenz-alert-in 0.3s ease-out;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 500;
-        `;
-        
-        // إضافة أنيميشن
-        if (!document.getElementById('lenz-anim-style')) {
+        addAlertStyles: function() {
+            if (document.getElementById('lenzpower-alert-styles')) return;
+            
             const style = document.createElement('style');
-            style.id = 'lenz-anim-style';
+            style.id = 'lenzpower-alert-styles';
             style.textContent = `
-                @keyframes lenz-alert-in {
+                #lenzpower-security-alert {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 999999;
+                    animation: slideInRight 0.3s ease-out;
+                }
+                
+                .alert-content {
+                    background: #D32F2F;
+                    color: white;
+                    padding: 15px 25px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    gap: 15px;
+                    font-family: 'Montserrat', sans-serif;
+                    font-weight: 500;
+                }
+                
+                .alert-close {
+                    background: transparent;
+                    border: none;
+                    color: white;
+                    font-size: 20px;
+                    cursor: pointer;
+                    padding: 0;
+                    width: 24px;
+                    height: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                
+                @keyframes slideInRight {
                     from { transform: translateX(100%); opacity: 0; }
                     to { transform: translateX(0); opacity: 1; }
                 }
             `;
+            
             document.head.appendChild(style);
         }
+    };
+    
+    // ==================== PROTECTION FUNCTIONS ====================
+    
+    // 1. منع النقر الأيمن (FUNCTIONAL)
+    const preventRightClick = function() {
+        // طريقة 1: Event listener
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            logger.log('Right click attempted');
+            alertSystem.createAlert(config.messages.rightClick, 'warning');
+            return false;
+        });
         
-        alertDiv.innerHTML = `
-            <i class="fas ${icon}" style="margin-right: 12px; font-size: 1.2rem;"></i>
-            <span>${message}</span>
-            <button onclick="this.parentElement.remove()" style="
-                margin-left: 15px;
-                background: transparent;
-                border: none;
-                color: white;
-                cursor: pointer;
-                font-size: 1.2rem;
-            ">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
+        // طريقة 2: Attribute على body
+        document.body.oncontextmenu = function() {
+            logger.log('Right click via oncontextmenu');
+            return false;
+        };
         
-        document.body.appendChild(alertDiv);
-        
-        // إزالة التنبيه بعد 3 ثواني
-        setTimeout(() => {
-            if (alertDiv.parentElement) {
-                alertDiv.remove();
+        // طريقة 3: لمنع النقر الأيمن على الصور
+        document.addEventListener('mousedown', function(e) {
+            if (e.button === 2) { // زر الفأرة الأيمن
+                e.preventDefault();
+                return false;
             }
-        }, 3000);
-    }
+        });
+    };
     
-    // ========== 9. تسجيل الأحداث ==========
-    function logEvent(event) {
-        console.log(`[LENZPOWER Security] ${new Date().toLocaleString()}: ${event}`);
-    }
+    // 2. منع النسخ (FUNCTIONAL)
+    const preventCopy = function() {
+        // منع النسخ
+        document.addEventListener('copy', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            logger.log('Copy attempted');
+            alertSystem.createAlert(config.messages.copyContent, 'info');
+            return false;
+        });
+        
+        // منع القص
+        document.addEventListener('cut', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            logger.log('Cut attempted');
+            return false;
+        });
+        
+        // إضافة نص حماية مخفي
+        const addHiddenProtection = function() {
+            const protector = document.createElement('div');
+            protector.style.cssText = 'position:absolute;left:-9999px;opacity:0;';
+            protector.textContent = '© LENZPOWER - Protected Content';
+            document.body.appendChild(protector);
+        };
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', addHiddenProtection);
+        } else {
+            addHiddenProtection();
+        }
+    };
     
-    // ========== 10. تهيئة الحماية ==========
-    window.addEventListener('load', function() {
-        // رسالة تحميل
+    // 3. منع التحديد (FUNCTIONAL)
+    const preventSelection = function() {
+        // Event listener لمنع التحديد
+        document.addEventListener('selectstart', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            logger.log('Text selection attempted');
+            alertSystem.createAlert(config.messages.selectContent, 'info');
+            return false;
+        });
+        
+        // CSS لمنع التحديد
+        const selectionStyle = document.createElement('style');
+        selectionStyle.textContent = `
+            * {
+                -webkit-user-select: none !important;
+                -moz-user-select: none !important;
+                -ms-user-select: none !important;
+                user-select: none !important;
+            }
+            
+            input, textarea {
+                -webkit-user-select: text !important;
+                -moz-user-select: text !important;
+                -ms-user-select: text !important;
+                user-select: text !important;
+            }
+        `;
+        document.head.appendChild(selectionStyle);
+    };
+    
+    // 4. منع أدوات المطور (FUNCTIONAL)
+    const preventDevTools = function() {
+        // منع اختصارات لوحة المفاتيح
+        document.addEventListener('keydown', function(e) {
+            // F12
+            if (e.key === 'F12' || e.keyCode === 123) {
+                e.preventDefault();
+                e.stopPropagation();
+                logger.log('F12 pressed');
+                alertSystem.createAlert(config.messages.devTools, 'error');
+                return false;
+            }
+            
+            // Ctrl+Shift+I
+            if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.keyCode === 73)) {
+                e.preventDefault();
+                e.stopPropagation();
+                logger.log('Ctrl+Shift+I pressed');
+                alertSystem.createAlert(config.messages.devTools, 'error');
+                return false;
+            }
+            
+            // Ctrl+Shift+J
+            if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.keyCode === 74)) {
+                e.preventDefault();
+                e.stopPropagation();
+                logger.log('Ctrl+Shift+J pressed');
+                alertSystem.createAlert(config.messages.devTools, 'error');
+                return false;
+            }
+            
+            // Ctrl+Shift+C
+            if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.keyCode === 67)) {
+                e.preventDefault();
+                e.stopPropagation();
+                logger.log('Ctrl+Shift+C pressed');
+                alertSystem.createAlert(config.messages.devTools, 'error');
+                return false;
+            }
+            
+            // Ctrl+U
+            if (e.ctrlKey && (e.key === 'U' || e.keyCode === 85)) {
+                e.preventDefault();
+                e.stopPropagation();
+                logger.log('Ctrl+U pressed');
+                alertSystem.createAlert(config.messages.devTools, 'error');
+                return false;
+            }
+        });
+        
+        // كشف أدوات المطور عن طريق الـ debugger
+        const detectDevTools = function() {
+            const startTime = new Date().getTime();
+            
+            // محاولة كشف debugger
+            (function() {
+                debugger;
+                const endTime = new Date().getTime();
+                
+                if (endTime - startTime > 100) {
+                    logger.log('DevTools detected via debugger');
+                    alertSystem.createAlert(config.messages.devTools, 'error');
+                    
+                    // إعادة التوجيه بعد 2 ثانية
+                    setTimeout(() => {
+                        window.location.href = window.location.href;
+                    }, 2000);
+                }
+            })();
+        };
+        
+        // تشغيل الكشف كل 1 ثانية
+        setInterval(detectDevTools, 1000);
+        
+        // كشف تغيير حجم النافذة
+        let lastWidth = window.innerWidth;
+        let lastHeight = window.innerHeight;
+        
+        setInterval(() => {
+            const currentWidth = window.innerWidth;
+            const currentHeight = window.innerHeight;
+            
+            if (Math.abs(currentWidth - lastWidth) > 100 || 
+                Math.abs(currentHeight - lastHeight) > 100) {
+                logger.log('DevTools detected via resize');
+                alertSystem.createAlert(config.messages.devTools, 'error');
+            }
+            
+            lastWidth = currentWidth;
+            lastHeight = currentHeight;
+        }, 500);
+    };
+    
+    // 5. منع سحب الصور (FUNCTIONAL)
+    const preventImageDrag = function() {
+        // لمنع سحب الصور
+        document.addEventListener('dragstart', function(e) {
+            if (e.target.tagName === 'IMG') {
+                e.preventDefault();
+                logger.log('Image drag attempted');
+                return false;
+            }
+        });
+        
+        // إضافة attribute على الصور
+        document.addEventListener('DOMContentLoaded', function() {
+            const images = document.getElementsByTagName('img');
+            for (let img of images) {
+                img.setAttribute('draggable', 'false');
+            }
+        });
+    };
+    
+    // ==================== INITIALIZATION ====================
+    const initializeProtection = function() {
+        logger.log('Initializing LENZPOWER protection system');
+        
+        // تشغيل جميع أنظمة الحماية
+        preventRightClick();
+        preventCopy();
+        preventSelection();
+        preventDevTools();
+        preventImageDrag();
+        
+        // إظهار رسالة البدء
         setTimeout(() => {
-            showAlert('Protection LENZPOWER activée avec succès', 'info');
+            alertSystem.createAlert('Protection LENZPOWER activée avec succès', 'success');
         }, 1000);
         
-        // حماية إضافية عند التحميل
-        document.body.setAttribute('oncontextmenu', 'return false');
-        document.body.setAttribute('onselectstart', 'return false');
-        document.body.setAttribute('ondragstart', 'return false');
-    });
+        logger.log('Protection system initialized successfully');
+    };
     
-    // ========== 11. منع تعديل الكود ==========
-    Object.freeze(Object);
-    Object.freeze(Array);
-    Object.freeze(Function);
+    // ==================== START PROTECTION ====================
+    
+    // بدء الحماية عندما تكون الصفحة جاهزة
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeProtection);
+    } else {
+        initializeProtection();
+    }
+    
+    // حماية إضافية لـ window
+    window.addEventListener('load', function() {
+        // منع فتح وحدة التحكم
+        (function() {
+            // إضافة عنصر لتتبع console.log
+            const element = document.createElement('div');
+            const descriptor = Object.getOwnPropertyDescriptor(element, 'innerHTML');
+            
+            Object.defineProperty(element, 'innerHTML', {
+                get: function() {
+                    logger.log('Console access attempted via getter');
+                    return '';
+                },
+                set: function(value) {
+                    return value;
+                }
+            });
+            
+            // تشويش console
+            if (window.console) {
+                const originalLog = console.log;
+                console.log = function(...args) {
+                    logger.log('Console.log called: ' + args.join(' '));
+                    originalLog.apply(console, ['[LENZPOWER]']); // لا تظهر المحتوى الحقيقي
+                };
+            }
+        })();
+    });
     
 })();
 
-// حماية إضافية خارج الـ IIFE
-document.onkeydown = function(e) {
-    // منع F12 نهائياً
-    if (e.keyCode === 123) return false;
+// حماية إضافية خارج الوظيفة
+(function() {
+    // منع استخدام F12 بشكل نهائي
+    document.onkeydown = function(e) {
+        // F12
+        if (e.keyCode === 123) {
+            return false;
+        }
+        
+        // اختصارات أخرى
+        if (e.ctrlKey && e.shiftKey) {
+            if (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67) {
+                return false;
+            }
+        }
+        
+        // Ctrl+U
+        if (e.ctrlKey && e.keyCode === 85) {
+            return false;
+        }
+    };
     
-    // منع Ctrl+Shift+I/J/C
-    if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) {
+    // حماية إضافية للنقر الأيمن
+    document.oncontextmenu = function() {
         return false;
-    }
-    
-    // منع Ctrl+U
-    if (e.ctrlKey && e.keyCode === 85) return false;
-};
-
-// حماية النقر الأيمن بإضافة attribute
-document.body.oncontextmenu = function() {
-    return false;
-};
-
-// حماية التحديد
-document.body.onselectstart = function() {
-    return false;
-};
+    };
+})();
     </script>
 </body>
 </html>
