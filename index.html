@@ -2198,18 +2198,325 @@
             observer.observe(card);
         });
         // ============================
-// LENZPOWER - حماية الموقع
-// الخطأ: كان يعيد إضافة نفس الـ style في كل مرة
-document.head.appendChild(style);
+// ============================
+// LENZPOWER - حماية حقيقية للموقع
+// ============================
 
-// التصحيح: التحقق أولاً من وجود الـ style
-let animationStyle = document.getElementById('security-animation-style');
-if (!animationStyle) {
-    animationStyle = document.createElement('style');
-    animationStyle.id = 'security-animation-style';
-    animationStyle.innerHTML = `...`;
-    document.head.appendChild(animationStyle);
-}
+(function() {
+    'use strict';
+    
+    // رسائل التحذير بالفرنسية
+    const messages = {
+        rightClick: "Désolé ! Le clic droit est désactivé sur ce site.",
+        devTools: "Accès non autorisé aux outils de développement !",
+        copyContent: "La copie de contenu est protégée sur LENZPOWER.",
+        selectContent: "La sélection de texte est limitée pour protéger notre contenu."
+    };
+    
+    // ========== 1. منع النقر الأيمن ==========
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        showAlert(messages.rightClick, 'warning');
+        logEvent('Tentative de clic droit');
+        return false;
+    });
+    
+    // ========== 2. منع النسخ ==========
+    document.addEventListener('copy', function(e) {
+        e.preventDefault();
+        showAlert(messages.copyContent, 'info');
+        logEvent('Tentative de copie');
+        return false;
+    });
+    
+    // ========== 3. منع التحديد ==========
+    document.addEventListener('selectstart', function(e) {
+        e.preventDefault();
+        showAlert(messages.selectContent, 'info');
+        logEvent('Tentative de sélection');
+        return false;
+    });
+    
+    // ========== 4. منع فتح أدوات المطور ==========
+    
+    // أ) منع اختصارات لوحة المفاتيح
+    document.addEventListener('keydown', function(e) {
+        // F12
+        if (e.key === 'F12' || e.keyCode === 123) {
+            e.preventDefault();
+            showAlert(messages.devTools, 'error');
+            logEvent('F12 pressé');
+            return false;
+        }
+        
+        // Ctrl+Shift+I
+        if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.keyCode === 73)) {
+            e.preventDefault();
+            showAlert(messages.devTools, 'error');
+            logEvent('Ctrl+Shift+I pressé');
+            return false;
+        }
+        
+        // Ctrl+Shift+J
+        if (e.ctrlKey && e.shiftKey && (e.key === 'J' || e.keyCode === 74)) {
+            e.preventDefault();
+            showAlert(messages.devTools, 'error');
+            logEvent('Ctrl+Shift+J pressé');
+            return false;
+        }
+        
+        // Ctrl+Shift+C
+        if (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.keyCode === 67)) {
+            e.preventDefault();
+            showAlert(messages.devTools, 'error');
+            logEvent('Ctrl+Shift+C pressé');
+            return false;
+        }
+        
+        // Ctrl+U (عرض المصدر)
+        if (e.ctrlKey && (e.key === 'u' || e.keyCode === 85)) {
+            e.preventDefault();
+            showAlert(messages.devTools, 'error');
+            logEvent('Ctrl+U pressé');
+            return false;
+        }
+    });
+    
+    // ب) كشف فتح أدوات المطور عن طريق تغيير الحجم
+    let devToolsOpen = false;
+    let lastWidth = window.innerWidth;
+    let lastHeight = window.innerHeight;
+    
+    setInterval(function() {
+        const widthDiff = Math.abs(window.outerWidth - window.innerWidth);
+        const heightDiff = Math.abs(window.outerHeight - window.innerHeight);
+        
+        // إذا كان الفرق كبيراً (أدوات المطور مفتوحة)
+        if ((widthDiff > 100 || heightDiff > 100) && !devToolsOpen) {
+            devToolsOpen = true;
+            showAlert(messages.devTools, 'error');
+            logEvent('DevTools détectés par changement de taille');
+            
+            // محاولة إغلاق أدوات المطور
+            closeDevTools();
+        }
+        
+        lastWidth = window.innerWidth;
+        lastHeight = window.innerHeight;
+    }, 500);
+    
+    // ج) طريقة متقدمة لكشف أدوات المطور
+    const element = new Image();
+    Object.defineProperty(element, 'id', {
+        get: function() {
+            showAlert(messages.devTools, 'error');
+            logEvent('DevTools détectés par vérification avancée');
+            closeDevTools();
+        }
+    });
+    
+    console.log('%c ' + element, 'font-size: 1px;');
+    
+    // ========== 5. منع سحب الصور ==========
+    document.addEventListener('dragstart', function(e) {
+        if (e.target.tagName === 'IMG') {
+            e.preventDefault();
+            logEvent('Tentative de glisser-déposer d\'image');
+            return false;
+        }
+    });
+    
+    // ========== 6. حماية إضافية للمحتوى ==========
+    
+    // أ) إضافة نص خفي يحمي النسخ
+    document.addEventListener('DOMContentLoaded', function() {
+        const protectionSpan = document.createElement('span');
+        protectionSpan.style.cssText = `
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            opacity: 0;
+            pointer-events: none;
+            user-select: none;
+        `;
+        protectionSpan.textContent = 'LENZPOWER © 2025 - Site protégé';
+        document.body.appendChild(protectionSpan);
+    });
+    
+    // ب) منع فحص العناصر
+    Object.defineProperty(document, '__defineGetter__', {
+        value: function() {
+            return function() {
+                showAlert(messages.devTools, 'error');
+                return null;
+            };
+        }
+    });
+    
+    // ========== 7. وظيفة إغلاق أدوات المطور ==========
+    function closeDevTools() {
+        // محاولة إغلاق أدوات المطور بإعادة تحميل الصفحة
+        setTimeout(function() {
+            window.location.reload();
+        }, 2000);
+        
+        // تشويش شاشة المستخدم
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #D32F2F, #212121);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 999999;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        `;
+        
+        overlay.innerHTML = `
+            <h1 style="font-size: 2rem; margin-bottom: 20px;">
+                <i class="fas fa-shield-alt"></i> LENZPOWER - Sécurité
+            </h1>
+            <p style="font-size: 1.2rem; max-width: 600px; margin-bottom: 20px;">
+                Les outils de développement sont interdits sur ce site.
+            </p>
+            <p style="font-size: 1rem; opacity: 0.8;">
+                La page sera rechargée automatiquement.
+            </p>
+        `;
+        
+        document.body.appendChild(overlay);
+    }
+    
+    // ========== 8. عرض التنبيهات ==========
+    function showAlert(message, type) {
+        // إزالة أي تنبيه سابق
+        const oldAlert = document.getElementById('lenzpower-alert');
+        if (oldAlert) oldAlert.remove();
+        
+        // تحديد الألوان
+        let bgColor, icon;
+        switch(type) {
+            case 'error': bgColor = '#D32F2F'; icon = 'fa-exclamation-triangle'; break;
+            case 'warning': bgColor = '#FF9800'; icon = 'fa-exclamation-circle'; break;
+            case 'info': bgColor = '#2196F3'; icon = 'fa-info-circle'; break;
+            default: bgColor = '#212121'; icon = 'fa-shield-alt';
+        }
+        
+        // إنشاء التنبيه
+        const alertDiv = document.createElement('div');
+        alertDiv.id = 'lenzpower-alert';
+        alertDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${bgColor};
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 999998;
+            display: flex;
+            align-items: center;
+            max-width: 400px;
+            animation: lenz-alert-in 0.3s ease-out;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 500;
+        `;
+        
+        // إضافة أنيميشن
+        if (!document.getElementById('lenz-anim-style')) {
+            const style = document.createElement('style');
+            style.id = 'lenz-anim-style';
+            style.textContent = `
+                @keyframes lenz-alert-in {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        alertDiv.innerHTML = `
+            <i class="fas ${icon}" style="margin-right: 12px; font-size: 1.2rem;"></i>
+            <span>${message}</span>
+            <button onclick="this.parentElement.remove()" style="
+                margin-left: 15px;
+                background: transparent;
+                border: none;
+                color: white;
+                cursor: pointer;
+                font-size: 1.2rem;
+            ">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        document.body.appendChild(alertDiv);
+        
+        // إزالة التنبيه بعد 3 ثواني
+        setTimeout(() => {
+            if (alertDiv.parentElement) {
+                alertDiv.remove();
+            }
+        }, 3000);
+    }
+    
+    // ========== 9. تسجيل الأحداث ==========
+    function logEvent(event) {
+        console.log(`[LENZPOWER Security] ${new Date().toLocaleString()}: ${event}`);
+    }
+    
+    // ========== 10. تهيئة الحماية ==========
+    window.addEventListener('load', function() {
+        // رسالة تحميل
+        setTimeout(() => {
+            showAlert('Protection LENZPOWER activée avec succès', 'info');
+        }, 1000);
+        
+        // حماية إضافية عند التحميل
+        document.body.setAttribute('oncontextmenu', 'return false');
+        document.body.setAttribute('onselectstart', 'return false');
+        document.body.setAttribute('ondragstart', 'return false');
+    });
+    
+    // ========== 11. منع تعديل الكود ==========
+    Object.freeze(Object);
+    Object.freeze(Array);
+    Object.freeze(Function);
+    
+})();
+
+// حماية إضافية خارج الـ IIFE
+document.onkeydown = function(e) {
+    // منع F12 نهائياً
+    if (e.keyCode === 123) return false;
+    
+    // منع Ctrl+Shift+I/J/C
+    if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) {
+        return false;
+    }
+    
+    // منع Ctrl+U
+    if (e.ctrlKey && e.keyCode === 85) return false;
+};
+
+// حماية النقر الأيمن بإضافة attribute
+document.body.oncontextmenu = function() {
+    return false;
+};
+
+// حماية التحديد
+document.body.onselectstart = function() {
+    return false;
+};
     </script>
 </body>
 </html>
