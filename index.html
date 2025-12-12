@@ -2197,6 +2197,297 @@
             card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
             observer.observe(card);
         });
+        // ============================
+// LENZPOWER - حماية الموقع
+// ============================
+
+(function() {
+    'use strict';
+    
+    // ==================== تعريف الرسائل بالفرنسية ====================
+    const messages = {
+        rightClick: "🚫 Désolé ! Le clic droit est désactivé sur ce site.",
+        devTools: "🚫 Accès non autorisé aux outils de développement !",
+        copyContent: "🚫 La copie de contenu est protégée sur LENZPOWER.",
+        selectContent: "🚫 La sélection de texte est limitée pour protéger notre contenu."
+    };
+    
+    // ==================== حماية النقر الأيمن ====================
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        showCustomAlert(messages.rightClick, 'warning');
+        logSecurityEvent('Tentative de clic droit');
+        return false;
+    });
+    
+    // ==================== منع فتح أدوات المطور ====================
+    // طريقة 1: كشف فتح أدوات المطور
+    let devToolsOpened = false;
+    
+    const checkDevTools = function() {
+        const widthThreshold = window.outerWidth - window.innerWidth > 100;
+        const heightThreshold = window.outerHeight - window.innerHeight > 100;
+        
+        if ((widthThreshold || heightThreshold) && !devToolsOpened) {
+            devToolsOpened = true;
+            showCustomAlert(messages.devTools, 'error');
+            logSecurityEvent('Outils de développement détectés');
+            
+            // إعادة توجيه بعد 3 ثواني
+            setTimeout(() => {
+                document.body.innerHTML = `
+                    <div style="
+                        position: fixed;
+                        top: 0; left: 0;
+                        width: 100%; height: 100%;
+                        background: linear-gradient(135deg, #D32F2F, #212121);
+                        color: white;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        align-items: center;
+                        text-align: center;
+                        padding: 20px;
+                        z-index: 999999;
+                        font-family: Arial, sans-serif;
+                    ">
+                        <h1 style="font-size: 2.5rem; margin-bottom: 20px; color: white;">
+                            <i class="fas fa-shield-alt"></i> LENZPOWER - Sécurité
+                        </h1>
+                        <p style="font-size: 1.2rem; max-width: 600px; margin-bottom: 30px;">
+                            L'accès aux outils de développement n'est pas autorisé sur ce site.
+                        </p>
+                        <p style="font-size: 1rem; opacity: 0.8; max-width: 500px;">
+                            Pour toute question, contactez-nous à 
+                            <a href="mailto:contact@lenzpower.ma" style="color: #FFCC00; text-decoration: none;">
+                                contact@lenzpower.ma
+                            </a>
+                        </p>
+                        <button onclick="location.reload()" style="
+                            margin-top: 30px;
+                            padding: 12px 30px;
+                            background: #FFCC00;
+                            color: #212121;
+                            border: none;
+                            border-radius: 5px;
+                            font-weight: bold;
+                            font-size: 1.1rem;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                        ">
+                            Revenir au site
+                        </button>
+                    </div>
+                `;
+            }, 3000);
+        }
+    };
+    
+    // طريقة 2: كشف استخدام F12 أو Ctrl+Shift+I
+    document.addEventListener('keydown', function(e) {
+        // F12
+        if (e.keyCode === 123) {
+            e.preventDefault();
+            showCustomAlert(messages.devTools, 'error');
+            logSecurityEvent('Touche F12 détectée');
+            return false;
+        }
+        
+        // Ctrl+Shift+I
+        if (e.ctrlKey && e.shiftKey && e.keyCode === 73) {
+            e.preventDefault();
+            showCustomAlert(messages.devTools, 'error');
+            logSecurityEvent('Raccourci Ctrl+Shift+I détecté');
+            return false;
+        }
+        
+        // Ctrl+Shift+J
+        if (e.ctrlKey && e.shiftKey && e.keyCode === 74) {
+            e.preventDefault();
+            showCustomAlert(messages.devTools, 'error');
+            logSecurityEvent('Raccourci Ctrl+Shift+J détecté');
+            return false;
+        }
+        
+        // Ctrl+Shift+C
+        if (e.ctrlKey && e.shiftKey && e.keyCode === 67) {
+            e.preventDefault();
+            showCustomAlert(messages.devTools, 'error');
+            logSecurityEvent('Raccourci Ctrl+Shift+C détecté');
+            return false;
+        }
+        
+        // Ctrl+U (عرض المصدر)
+        if (e.ctrlKey && e.keyCode === 85) {
+            e.preventDefault();
+            showCustomAlert(messages.devTools, 'error');
+            logSecurityEvent('Tentative d\'affichage du code source');
+            return false;
+        }
+    });
+    
+    // ==================== منع نسخ النصوص ====================
+    document.addEventListener('copy', function(e) {
+        e.preventDefault();
+        showCustomAlert(messages.copyContent, 'info');
+        logSecurityEvent('Tentative de copie de contenu');
+        return false;
+    });
+    
+    // ==================== منع تحديد النصوص ====================
+    document.addEventListener('selectstart', function(e) {
+        e.preventDefault();
+        showCustomAlert(messages.selectContent, 'info');
+        logSecurityEvent('Tentative de sélection de texte');
+        return false;
+    });
+    
+    // ==================== منع سحب الصور ====================
+    document.addEventListener('dragstart', function(e) {
+        if (e.target.tagName === 'IMG') {
+            e.preventDefault();
+            logSecurityEvent('Tentative de glisser-déposer d\'image');
+            return false;
+        }
+    });
+    
+    // ==================== منع فحص العناصر ====================
+    Object.defineProperty(document, 'hidden', {
+        get: function() {
+            return true;
+        }
+    });
+    
+    Object.defineProperty(document, 'visibilityState', {
+        get: function() {
+            return 'visible';
+        }
+    });
+    
+    // ==================== كشف تغيير حجم النافذة (أدوات المطور) ====================
+    setInterval(checkDevTools, 1000);
+    
+    // ==================== عرض رسائل تنبيه مخصصة ====================
+    function showCustomAlert(message, type) {
+        // إزالة أي رسالة سابقة
+        const existingAlert = document.getElementById('security-alert');
+        if (existingAlert) {
+            document.body.removeChild(existingAlert);
+        }
+        
+        // تحديد اللون حسب نوع الرسالة
+        let backgroundColor, icon;
+        switch(type) {
+            case 'error':
+                backgroundColor = '#D32F2F'; // أحمر
+                icon = 'fa-exclamation-triangle';
+                break;
+            case 'warning':
+                backgroundColor = '#FF9800'; // برتقالي
+                icon = 'fa-exclamation-circle';
+                break;
+            case 'info':
+                backgroundColor = '#2196F3'; // أزرق
+                icon = 'fa-info-circle';
+                break;
+            default:
+                backgroundColor = '#212121'; // أسود
+                icon = 'fa-shield-alt';
+        }
+        
+        // إنشاء عنصر الرسالة
+        const alertDiv = document.createElement('div');
+        alertDiv.id = 'security-alert';
+        alertDiv.innerHTML = `
+            <div style="
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${backgroundColor};
+                color: white;
+                padding: 15px 25px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 999999;
+                display: flex;
+                align-items: center;
+                max-width: 400px;
+                animation: slideIn 0.3s ease-out;
+                font-family: 'Montserrat', sans-serif;
+                font-weight: 500;
+            ">
+                <i class="fas ${icon}" style="margin-right: 12px; font-size: 1.2rem;"></i>
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()" style="
+                    margin-left: 15px;
+                    background: transparent;
+                    border: none;
+                    color: white;
+                    cursor: pointer;
+                    font-size: 1.2rem;
+                ">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        
+        // إضافة أنيميشن
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        document.body.appendChild(alertDiv);
+        
+        // إزالة الرسالة بعد 3 ثواني
+        setTimeout(() => {
+            if (alertDiv.parentElement) {
+                alertDiv.remove();
+            }
+        }, 3000);
+    }
+    
+    // ==================== تسجيل الأحداث الأمنية ====================
+    function logSecurityEvent(event) {
+        const timestamp = new Date().toISOString();
+        console.log(`%c[LENZPOWER Security] ${timestamp}: ${event}`, 
+            'color: #D32F2F; font-weight: bold;');
+        
+        // يمكنك إرسال هذه البيانات إلى خادمك هنا
+        // sendToServer({ event, timestamp, userAgent: navigator.userAgent });
+    }
+    
+    // ==================== حماية إضافية ضد المتصفحات المتقدمة ====================
+    // منع فتح وحدة التحكم
+    if (typeof console !== "undefined") {
+        if (typeof console.log !== 'undefined') {
+            console.log = function() {};
+        }
+        if (typeof console.warn !== 'undefined') {
+            console.warn = function() {};
+        }
+        if (typeof console.error !== 'undefined') {
+            console.error = function() {};
+        }
+    }
+    
+    // ==================== رسالة ترحيب في وحدة التحكم ====================
+    console.log('%c⚠️ Arrêt ! ⚠️', 'color: #D32F2F; font-size: 40px; font-weight: bold;');
+    console.log('%cCette fonctionnalité du navigateur est réservée aux développeurs.', 'color: #212121; font-size: 16px;');
+    console.log('%cSi quelqu\'un vous a demandé de copier/coller quelque chose ici, c\'est probablement une arnaque.', 'color: #D32F2F; font-size: 14px;');
+    
+    // ==================== إظهار رسالة التحميل ====================
+    window.addEventListener('load', function() {
+        setTimeout(() => {
+            showCustomAlert('✅ Protection LENZPOWER activée avec succès', 'info');
+        }, 1000);
+    });
+    
+})();
     </script>
 </body>
 </html>
