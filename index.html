@@ -2206,10 +2206,10 @@
     
     // ==================== تعريف الرسائل بالفرنسية ====================
     const messages = {
-        rightClick: "🚫 Désolé ! Le clic droit est désactivé sur ce site.",
-        devTools: "🚫 Accès non autorisé aux outils de développement !",
-        copyContent: "🚫 La copie de contenu est protégée sur LENZPOWER.",
-        selectContent: "🚫 La sélection de texte est limitée pour protéger notre contenu."
+        rightClick: " Désolé ! Le clic droit est désactivé sur ce site.",
+        devTools: " Accès non autorisé aux outils de développement !",
+        copyContent: " La copie de contenu est protégée sur LENZPOWER.",
+        selectContent: " La sélection de texte est limitée pour protéger notre contenu."
     };
     
     // ==================== حماية النقر الأيمن ====================
@@ -2476,14 +2476,14 @@
     }
     
     // ==================== رسالة ترحيب في وحدة التحكم ====================
-    console.log('%c⚠️ Arrêt ! ⚠️', 'color: #D32F2F; font-size: 40px; font-weight: bold;');
+    console.log('%c⚠️ Arrêt ! ', 'color: #D32F2F; font-size: 40px; font-weight: bold;');
     console.log('%cCette fonctionnalité du navigateur est réservée aux développeurs.', 'color: #212121; font-size: 16px;');
     console.log('%cSi quelqu\'un vous a demandé de copier/coller quelque chose ici, c\'est probablement une arnaque.', 'color: #D32F2F; font-size: 14px;');
     
     // ==================== إظهار رسالة التحميل ====================
     window.addEventListener('load', function() {
         setTimeout(() => {
-            showCustomAlert('✅ Protection LENZPOWER activée avec succès', 'info');
+            showCustomAlert(' Protection LENZPOWER activée avec succès', 'info');
         }, 1000);
     });
     
